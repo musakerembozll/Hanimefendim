@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sana Özel</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Outfit:wght@300;400;600&family=Pacifico&family=Great+Vibes&family=Satisfy&family=Caveat:wght@400;700&family=Lobster&family=Sacramento&family=Comforter+Brush&family=Indie+Flower&family=Shadows+Into+Light&family=Kalam:wght@400;700&family=Patrick+Hand&family=Amatic+SC:wght@400;700&family=Permanent+Marker&family=Architects+Daughter&family=Courgette&family=Cookie&family=Playball&family=Tangerine:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Outfit', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        #app.disabled {
+            pointer-events: none;
+        }
+
+        #bg-image {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            transition: opacity 1.2s ease;
+        }
+
+        .video-layer {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 2;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+
+        .video-layer.active {
+            opacity: 1;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.05) 40%, rgba(0, 0, 0, 0.05) 60%, rgba(0, 0, 0, 0.35) 100%);
+        }
+
+        /* ===== TAP INDICATOR ===== */
+        #tap-indicator {
+            position: absolute;
+            z-index: 10;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            animation: tapFloat 2s ease-in-out infinite;
+        }
+
+        #tap-indicator.hidden {
+            display: none;
+        }
+
+        .tap-circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(4px);
+        }
+
+        .tap-circle::before {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            animation: tapPulse 2s ease-in-out infinite;
+        }
+
+        .tap-circle::after {
+            content: '';
+            position: absolute;
+            inset: -14px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            animation: tapPulse 2s ease-in-out infinite 0.3s;
+        }
+
+        .tap-icon {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.85);
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .tap-text {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: 300;
+        }
+
+        @keyframes tapFloat {
+
+            0%,
+            100% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            50% {
+                transform: translateX(-50%) translateY(-10px);
+            }
+        }
+
+        @keyframes tapPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.3;
+                transform: scale(1.1);
+            }
+        }
+
+        /* ===== STORY TEXT ===== */
+        #story-text {
+            position: absolute;
+            z-index: 10;
+            width: 100%;
+            text-align: center;
+            padding: 0 20px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        #story-text.visible {
+            animation: textReveal 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        #story-text.fade-out {
+            animation: textFadeOut 1.5s ease forwards;
+        }
+
+        #story-text h1 {
+            font-family: 'Dancing Script', cursive;
+            font-size: clamp(28px, 7vw, 52px);
+            font-weight: 700;
+            line-height: 1.4;
+            letter-spacing: 2px;
+            transition: color linear;
+        }
+
+        @keyframes textReveal {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) translateY(30px) scale(0.9);
+                filter: blur(8px);
+            }
+
+            60% {
+                opacity: 1;
+                filter: blur(0);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) translateY(0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        @keyframes textFadeOut {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) translateY(0) scale(1);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) translateY(-20px) scale(0.95);
+                filter: blur(4px);
+            }
+        }
+
+        /* ===== SCATTERED GLOW ORBS ===== */
+        .glow-orb {
+            position: absolute;
+            z-index: 4;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            filter: blur(50px);
+            transition: background 0.4s ease;
+            mix-blend-mode: screen;
+        }
+
+        .glow-orb.active {
+            opacity: 1;
+        }
+
+        /* ===== CONTINUE HINT ===== */
+        #continue-hint {
+            position: absolute;
+            z-index: 10;
+            bottom: 6%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 300;
+            opacity: 0;
+            pointer-events: none;
+            text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        #continue-hint.visible {
+            animation: hintFadeIn 0.8s forwards;
+        }
+
+        @keyframes hintFadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* ===== PARTICLES ===== */
+        .particle {
+            position: absolute;
+            z-index: 20;
+            pointer-events: none;
+            font-size: 16px;
+            opacity: 0;
+            animation: particleRise 4s ease-out forwards;
+        }
+
+        @keyframes particleRise {
+            0% {
+                opacity: 0;
+                transform: translateY(0) scale(0.5) rotate(0deg);
+            }
+
+            20% {
+                opacity: 0.7;
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-300px) scale(1.2) rotate(45deg);
+            }
+        }
+
+        #sample-canvas {
+            display: none;
+        }
+
+        /* ===== LOVE PHASE ===== */
+        #love-phase {
+            position: absolute;
+            inset: 0;
+            z-index: 12;
+            display: none;
+            overflow: hidden;
+        }
+
+        #love-phase.active {
+            display: block;
+        }
+
+        #love-instruction {
+            position: absolute;
+            top: 6%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 16;
+            font-family: 'Dancing Script', cursive;
+            font-size: clamp(20px, 5vw, 32px);
+            color: #fff;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            transition: opacity 1s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        #love-instruction.visible {
+            opacity: 1;
+        }
+
+        #scroll-track {
+            position: absolute;
+            top: 15%;
+            left: 0;
+            width: 100%;
+            bottom: 0;
+            overflow: hidden;
+        }
+
+        #scroll-inner {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 0;
+            padding: 10px 16px;
+            animation: scrollDown linear infinite;
+            position: relative;
+        }
+
+        @keyframes scrollDown {
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(-50%);
+            }
+        }
+
+        .phrase-word {
+            display: inline;
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(14px, 3.8vw, 20px);
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+            line-height: 2.2;
+            padding: 2px 4px;
+        }
+
+        .phrase-word:hover {
+            color: #ff6ab0;
+            text-shadow: 0 0 12px rgba(255, 100, 170, 0.6);
+        }
+
+        .phrase-word.clicked {
+            color: rgba(255, 100, 170, 0.35);
+            pointer-events: none;
+        }
+
+        .phrase-sep {
+            display: inline;
+            font-size: clamp(14px, 3.8vw, 20px);
+            color: rgba(255, 255, 255, 0.2);
+            line-height: 2.2;
+            padding: 2px 2px;
+            pointer-events: none;
+        }
+
+        /* ===== SENI SEVIYORUM ===== */
+        #seni-seviyorum {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 30;
+            width: 90vw;
+            max-width: 90vw;
+            font-size: clamp(24px, 6vw, 44px);
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255, 80, 150, 0.7), 0 0 40px rgba(255, 80, 150, 0.4),
+                0 0 60px rgba(255, 50, 120, 0.3), 0 2px 8px rgba(0, 0, 0, 0.8);
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            padding: 16px 20px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 60%, transparent 80%);
+            border-radius: 16px;
+            transition: font-family 0.3s ease;
+        }
+
+        #seni-seviyorum.show {
+            opacity: 1;
+            animation: sevPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        #seni-seviyorum.bump {
+            animation: sevBump 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        #seni-seviyorum.hide {
+            animation: sevFadeOut 0.8s ease forwards;
+        }
+
+        @keyframes sevPop {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        @keyframes sevBump {
+            0% {
+                transform: translate(-50%, -50%) scale(1.15);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        @keyframes sevFadeOut {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9) translateY(-10px);
+            }
+        }
+
+        .heart-burst {
+            position: fixed;
+            z-index: 28;
+            pointer-events: none;
+            font-size: 24px;
+            opacity: 0;
+        }
+
+        @keyframes heartFloat {
+            0% {
+                opacity: 0;
+                transform: translate(0, 0) scale(0.3) rotate(0deg);
+            }
+
+            15% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(var(--dx), var(--dy)) scale(1.3) rotate(var(--rot));
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <img id="bg-image" src="0.png" alt="">
+        <video id="video-a" class="video-layer" playsinline muted></video>
+        <video id="video-b" class="video-layer" playsinline muted></video>
+        <div class="overlay"></div>
+
+        <div id="orbs-container"></div>
+
+        <div id="tap-indicator">
+            <div class="tap-circle">
+                <svg class="tap-icon" viewBox="0 0 24 24">
+                    <path d="M12 18V6M12 6l-4 4M12 6l4 4" />
+                    <circle cx="12" cy="21" r="1.5" fill="rgba(255,255,255,0.85)" stroke="none" />
+                </svg>
+            </div>
+            <span class="tap-text">dokun</span>
+        </div>
+
+        <div id="story-text">
+            <h1 id="text-content"></h1>
+        </div>
+        <div id="continue-hint">devam etmek için dokun</div>
+
+        <div id="love-phase">
+            <div id="love-instruction">Yazılara Tıkla</div>
+            <div id="scroll-track">
+                <div id="scroll-inner"></div>
+            </div>
+        </div>
+
+        <div id="seni-seviyorum"></div>
+    </div>
+
+    <canvas id="sample-canvas" width="4" height="4"></canvas>
+    <audio id="bg-music" preload="auto">
+        <source src="Pierce The Veil - Hold On Till May (Track 12).mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // ===== TURKISH-COMPATIBLE GOOGLE FONTS =====
+        const turkishFonts = [
+            "'Dancing Script', cursive",
+            "'Pacifico', cursive",
+            "'Great Vibes', cursive",
+            "'Satisfy', cursive",
+            "'Caveat', cursive",
+            "'Lobster', cursive",
+            "'Sacramento', cursive",
+            "'Comforter Brush', cursive",
+            "'Indie Flower', cursive",
+            "'Shadows Into Light', cursive",
+            "'Kalam', cursive",
+            "'Patrick Hand', cursive",
+            "'Amatic SC', cursive",
+            "'Permanent Marker', cursive",
+            "'Architects Daughter', cursive",
+            "'Courgette', cursive",
+            "'Cookie', cursive",
+            "'Playball', cursive",
+            "'Tangerine', cursive"
+        ];
+        let lastFontIndex = -1;
+
+        function getRandomFont() {
+            let idx;
+            do { idx = Math.floor(Math.random() * turkishFonts.length); } while (idx === lastFontIndex);
+            lastFontIndex = idx;
+            return turkishFonts[idx];
+        }
+
+        const lovePhrases = [
+            "I love you", "Ich liebe dich", "Je t'aime", "Te amo", "Ti amo",
+            "Eu te amo", "Ik hou van je", "Ya tebya lyublyu", "S'agapo",
+            "Kocham cię", "Jag älskar dig", "Jeg elsker deg", "Jeg elsker dig",
+            "Minä rakastan sinua", "Ég elska þig", "Miluji tě", "Ľúbim ťa",
+            "Szeretlek", "Te iubesc", "Obicham te", "Volim te", "Ljubim te",
+            "Të dua", "Ma armastan sind", "Es tevi mīlu", "Aš tave myliu",
+            "Is breá liom tú", "Rwy'n dy garu di", "Inħobbok", "Seni seviyorum",
+            "Mən səni sevirəm", "Men seni sevaman", "Men seni jaqsı köremin",
+            "Men seni süyöm", "Men seni söýýärin", "Ana behibek", "Dooset daram",
+            "Ani ohev otach", "Ez te hez dikim", "Yes kez sirum em", "Mikvarkhar",
+            "Aishiteru", "Saranghae", "Wo ai ni", "Ngo oi nei",
+            "Main tumse pyar karta hoon", "Ami tomake bhalobashi",
+            "Mainu twadde naal pyar hai", "Chan rak khun", "Anh yêu em",
+            "Aku cinta kamu", "Saya sayang awak", "Mahal kita", "Bi chamd khairtai",
+            "Ma timilai maya garchu", "Mama oyata adareyi", "Khnhom srolanh nhek",
+            "Khony hak chao", "Nga nint ko chit te", "Kulo tresno panjenengan",
+            "Aroha ana ahau ki a koe", "Ou te alofa ia te oe", "Aloha wau ia 'oe",
+            "Nakupenda", "Ek het jou lief", "Ewedihaliehu", "Ngiyakuthanda",
+            "Ndiyakuthanda", "Mo nifẹ rẹ", "A hụrụ m gị n'anya", "Ina son ki",
+            "Waan ku jecelahay", "Tiako ianao", "Mi amas vin", "Maite zaitut",
+            "T'estimo", "Ámote", "Ech hun dech gär", "Ikh hob dikh lib",
+            "Munayki", "Rohayhu", "Munasmarua", "Asavakit", "Ua here au ia oe",
+            "Da garout a ran", "Ti tengu caru", "Ik hâld fan dy",
+            "Tha gaol agam ort", "T'aimi", "T'amo", "Chit pade",
+            "Min sine yaratam", "🤟"
+        ];
+
+        const stages = [
+            { type: 'image', src: '0.png', text: null, textColor: null },
+            { type: 'video', src: '1.mp4', text: 'Aşkınla Uyandım...', textColor: 'black' },
+            { type: 'video', src: '2.mp4', text: 'Aşkınla Uyuyacağım...', textColor: 'black-to-white' },
+            { type: 'video', src: '3.mp4', text: 'Yeniden Uyandığımda ise...', textColor: 'black' },
+            { type: 'video', src: '4.mp4', text: 'Her Yaşamımda...', textColor: 'black' },
+            { type: 'image', src: '0.png', text: 'Aşkını Bulacağım!', textColor: 'white' }
+        ];
+
+        let currentStage = 0, isTransitioning = false, videoPlaying = false;
+        let musicStarted = false, lightsActive = false, animFrameId = null;
+        let colorTransitionTimer = null, activeVideoSlot = 'a';
+        let lovePhaseActive = false, cokCount = 0;
+
+        const app = document.getElementById('app');
+        const bgImage = document.getElementById('bg-image');
+        const videoA = document.getElementById('video-a');
+        const videoB = document.getElementById('video-b');
+        const tapIndicator = document.getElementById('tap-indicator');
+        const storyText = document.getElementById('story-text');
+        const textContent = document.getElementById('text-content');
+        const continueHint = document.getElementById('continue-hint');
+        const bgMusic = document.getElementById('bg-music');
+        const sampleCanvas = document.getElementById('sample-canvas');
+        const sampleCtx = sampleCanvas.getContext('2d', { willReadFrequently: true });
+        const lovePhase = document.getElementById('love-phase');
+        const loveInstruction = document.getElementById('love-instruction');
+        const scrollInner = document.getElementById('scroll-inner');
+        const seniSeviyorum = document.getElementById('seni-seviyorum');
+        const orbsContainer = document.getElementById('orbs-container');
+
+        // ===== SCATTERED GLOW ORBS =====
+        const NUM_ORBS = 12;
+        const orbs = [];
+        const orbPositions = [];
+
+        for (let i = 0; i < NUM_ORBS; i++) {
+            const orb = document.createElement('div');
+            orb.className = 'glow-orb';
+            const size = 80 + Math.random() * 120;
+            orb.style.width = size + 'px';
+            orb.style.height = size + 'px';
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            orb.style.left = x + '%';
+            orb.style.top = y + '%';
+            orb.style.transform = 'translate(-50%, -50%)';
+            orbsContainer.appendChild(orb);
+            orbs.push(orb);
+            orbPositions.push({ x, y, size });
+        }
+
+        let audioContext = null, analyser = null, dataArray = null;
+
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaElementSource(bgMusic);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.6;
+                source.connect(analyser); analyser.connect(audioContext.destination);
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+            } catch (e) { }
+        }
+
+        function sampleColorAtPoint(xPercent, yPercent) {
+            const av = activeVideoSlot === 'a' ? videoA : videoB;
+            const source = (av && !av.paused && av.videoWidth > 0) ? av : null;
+            if (!source) return [255, 100, 180];
+            try {
+                const vw = source.videoWidth, vh = source.videoHeight;
+                const sx = Math.max(0, Math.min(Math.floor((xPercent / 100) * vw), vw - 1));
+                const sy = Math.max(0, Math.min(Math.floor((yPercent / 100) * vh), vh - 1));
+                sampleCanvas.width = vw; sampleCanvas.height = vh;
+                sampleCtx.drawImage(source, 0, 0, vw, vh);
+                const px = sampleCtx.getImageData(sx, sy, 1, 1).data;
+                const r = px[0], g = px[1], b = px[2], br = (r + g + b) / 3;
+                let vr, vg, vb;
+                if (br < 80) { vr = Math.min(255, 255 - r + 60); vg = Math.min(255, 255 - g + 40); vb = Math.min(255, 255 - b + 60); }
+                else if (br > 180) { vr = Math.max(50, 255 - r); vg = Math.max(50, 255 - g); vb = Math.max(50, 255 - b); }
+                else { const f = 1.8, a = (r + g + b) / 3; vr = Math.min(255, Math.max(0, 255 - (a + (r - a) * f))); vg = Math.min(255, Math.max(0, 255 - (a + (g - a) * f))); vb = Math.min(255, Math.max(0, 255 - (a + (b - a) * f))); }
+                return [vr, vg, vb];
+            } catch (e) { return [255, 100, 180]; }
+        }
+
+        const orbColors = orbs.map(() => [255, 100, 180]);
+        let sampleFrame = 0;
+
+        function animateLights() {
+            if (!lightsActive) return;
+            sampleFrame++;
+            const shouldSample = sampleFrame % 3 === 0;
+
+            if (analyser && dataArray) {
+                analyser.getByteFrequencyData(dataArray);
+                const totalBands = analyser.frequencyBinCount;
+                for (let i = 0; i < NUM_ORBS; i++) {
+                    const bs = Math.floor((i / NUM_ORBS) * totalBands);
+                    const be = Math.floor(((i + 1) / NUM_ORBS) * totalBands);
+                    let sum = 0; for (let j = bs; j < be; j++) sum += dataArray[j];
+                    const intensity = (sum / (be - bs)) / 255;
+                    if (shouldSample) {
+                        const s = sampleColorAtPoint(orbPositions[i].x, orbPositions[i].y);
+                        orbColors[i][0] += (s[0] - orbColors[i][0]) * 0.12;
+                        orbColors[i][1] += (s[1] - orbColors[i][1]) * 0.12;
+                        orbColors[i][2] += (s[2] - orbColors[i][2]) * 0.12;
+                    }
+                    const c = orbColors[i];
+                    orbs[i].style.background = `radial-gradient(circle, rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},0.85) 0%, transparent 70%)`;
+                    orbs[i].style.opacity = 0.15 + intensity * 0.85;
+                    orbs[i].style.transform = `translate(-50%,-50%) scale(${0.8 + intensity * 1.5})`;
+                }
+            } else {
+                const t = Date.now() / 1000;
+                for (let i = 0; i < NUM_ORBS; i++) {
+                    const phase = (i / NUM_ORBS) * Math.PI * 2;
+                    const beat = Math.pow((Math.sin(t * 150 / 60 * Math.PI + phase) + 1) / 2, 1.5);
+                    if (shouldSample) {
+                        const s = sampleColorAtPoint(orbPositions[i].x, orbPositions[i].y);
+                        orbColors[i][0] += (s[0] - orbColors[i][0]) * 0.12;
+                        orbColors[i][1] += (s[1] - orbColors[i][1]) * 0.12;
+                        orbColors[i][2] += (s[2] - orbColors[i][2]) * 0.12;
+                    }
+                    const c = orbColors[i];
+                    orbs[i].style.background = `radial-gradient(circle, rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},0.85) 0%, transparent 70%)`;
+                    orbs[i].style.opacity = 0.15 + beat * 0.85;
+                    orbs[i].style.transform = `translate(-50%,-50%) scale(${0.8 + beat * 1.5})`;
+                }
+            }
+            animFrameId = requestAnimationFrame(animateLights);
+        }
+
+        function startLights() {
+            orbs.forEach(o => o.classList.add('active'));
+            lightsActive = true; animateLights();
+        }
+
+        function spawnParticles(count = 8) {
+            const sym = ['♥', '✦', '♡', '·'];
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const p = document.createElement('div'); p.className = 'particle';
+                    p.textContent = sym[Math.floor(Math.random() * sym.length)];
+                    p.style.left = Math.random() * 100 + '%'; p.style.bottom = '10%';
+                    p.style.fontSize = (12 + Math.random() * 16) + 'px';
+                    p.style.color = `hsl(${330 + Math.random() * 60},80%,75%)`;
+                    p.style.animationDuration = (3 + Math.random() * 3) + 's';
+                    app.appendChild(p); setTimeout(() => p.remove(), 6000);
+                }, i * 200);
+            }
+        }
+
+        function spawnHeartBurst(x, y) {
+            const hearts = ['❤️', '💕', '💖', '💗', '♥', '💘'];
+            for (let i = 0; i < 15; i++) {
+                const h = document.createElement('div'); h.className = 'heart-burst';
+                h.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+                h.style.left = x + 'px'; h.style.top = y + 'px';
+                h.style.fontSize = (16 + Math.random() * 20) + 'px';
+                const angle = Math.random() * Math.PI * 2, dist = 60 + Math.random() * 140;
+                h.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+                h.style.setProperty('--dy', (Math.sin(angle) * dist - 50) + 'px');
+                h.style.setProperty('--rot', ((Math.random() - 0.5) * 90) + 'deg');
+                h.style.animation = `heartFloat ${1.5 + Math.random()}s ease-out forwards`;
+                h.style.animationDelay = (Math.random() * 0.2) + 's';
+                document.body.appendChild(h); setTimeout(() => h.remove(), 3000);
+            }
+        }
+
+        // ===== TEXT COLOR PER STAGE (restored) =====
+        function applyTextColor(ct) {
+            const h = textContent;
+            if (colorTransitionTimer) { clearInterval(colorTransitionTimer); colorTransitionTimer = null; }
+            switch (ct) {
+                case 'black':
+                    h.style.color = '#000';
+                    h.style.textShadow = '0 0 20px rgba(255,255,255,0.8),0 0 40px rgba(255,255,255,0.5),0 2px 8px rgba(255,255,255,0.6)';
+                    break;
+                case 'white':
+                    h.style.color = '#fff';
+                    h.style.textShadow = '0 0 20px rgba(0,0,0,0.9),0 0 40px rgba(0,0,0,0.6),0 2px 8px rgba(0,0,0,0.8),0 0 12px rgba(255,150,200,0.4)';
+                    break;
+                case 'black-to-white':
+                    h.style.color = '#000';
+                    h.style.textShadow = '0 0 20px rgba(255,255,255,0.8),0 0 40px rgba(255,255,255,0.5),0 2px 8px rgba(255,255,255,0.6)';
+                    break;
+                case 'white-to-black':
+                    h.style.color = '#fff';
+                    h.style.textShadow = '0 0 20px rgba(0,0,0,0.9),0 0 40px rgba(0,0,0,0.6),0 2px 8px rgba(0,0,0,0.8)';
+                    break;
+            }
+        }
+
+        function startColorTransition(ct, dur) {
+            const h = textContent, steps = 60, interval = dur / steps; let step = 0;
+            colorTransitionTimer = setInterval(() => {
+                step++; const p = step / steps;
+                if (ct === 'black-to-white') {
+                    const v = Math.round(p * 255); h.style.color = `rgb(${v},${v},${v})`;
+                    h.style.textShadow = `0 0 20px rgba(255,255,255,${0.8 * (1 - p)}),0 0 20px rgba(0,0,0,${0.9 * p}),0 0 40px rgba(0,0,0,${0.63 * p})`;
+                } else if (ct === 'white-to-black') {
+                    const v = Math.round(255 * (1 - p)); h.style.color = `rgb(${v},${v},${v})`;
+                    h.style.textShadow = `0 0 20px rgba(0,0,0,${0.9 * (1 - p)}),0 0 20px rgba(255,255,255,${0.8 * p}),0 0 40px rgba(255,255,255,${0.56 * p})`;
+                }
+                if (step >= steps) { clearInterval(colorTransitionTimer); colorTransitionTimer = null; }
+            }, interval);
+        }
+
+        function showText(t) {
+            storyText.classList.remove('visible', 'fade-out');
+            storyText.style.opacity = '';
+            textContent.textContent = '';
+            void storyText.offsetWidth;
+            textContent.textContent = t;
+            storyText.classList.add('visible');
+        }
+
+        function hideText() { storyText.classList.remove('visible', 'fade-out'); storyText.style.opacity = '0'; }
+        function fadeOutText() { storyText.classList.remove('visible'); void storyText.offsetWidth; storyText.classList.add('fade-out'); }
+
+        function getActiveVideo() { return activeVideoSlot === 'a' ? videoA : videoB; }
+        function getInactiveVideo() { return activeVideoSlot === 'a' ? videoB : videoA; }
+        function swapVideoSlot() { activeVideoSlot = activeVideoSlot === 'a' ? 'b' : 'a'; }
+
+        // ===== STAGE TRANSITIONS =====
+        function goToStage(si) {
+            if (isTransitioning || videoPlaying) return;
+            isTransitioning = true;
+            const stage = stages[si];
+            hideText(); continueHint.classList.remove('visible');
+
+            if (si === 0) {
+                bgImage.style.opacity = '1'; videoA.classList.remove('active'); videoB.classList.remove('active');
+                tapIndicator.classList.remove('hidden'); isTransitioning = false; return;
+            }
+            if (!musicStarted) { musicStarted = true; initAudio(); bgMusic.play().catch(e => { }); startLights(); }
+            tapIndicator.classList.add('hidden');
+
+            if (stage.type === 'video') {
+                const nv = getInactiveVideo(), ov = getActiveVideo();
+                nv.src = stage.src; nv.loop = false; nv.load();
+                app.classList.add('disabled'); videoPlaying = true;
+
+                const onReady = () => {
+                    nv.removeEventListener('canplay', onReady);
+                    bgImage.style.opacity = '0'; nv.classList.add('active');
+                    nv.play().catch(e => { });
+                    setTimeout(() => { ov.classList.remove('active'); setTimeout(() => { ov.pause(); ov.removeAttribute('src'); ov.load(); }, 800); }, 200);
+                    swapVideoSlot(); isTransitioning = false;
+                    setTimeout(() => {
+                        applyTextColor(stage.textColor);
+                        showText(stage.text);
+                        spawnParticles();
+                        if (stage.textColor === 'black-to-white' || stage.textColor === 'white-to-black') {
+                            const rem = (nv.duration - nv.currentTime) * 1000;
+                            startColorTransition(stage.textColor, Math.max(rem - 500, 2000));
+                        }
+                    }, 600);
+                    nv.onended = () => { videoPlaying = false; app.classList.remove('disabled'); continueHint.classList.add('visible'); nv.onended = null; };
+                };
+                nv.addEventListener('canplay', onReady, { once: true });
+                setTimeout(() => { if (isTransitioning) { nv.removeEventListener('canplay', onReady); onReady(); } }, 3000);
+
+            } else if (stage.type === 'image' && si > 0) {
+                const ov = getActiveVideo();
+                bgImage.src = stage.src; bgImage.style.opacity = '1';
+                setTimeout(() => { ov.classList.remove('active'); setTimeout(() => { ov.pause(); ov.removeAttribute('src'); ov.load(); }, 800); }, 300);
+                setTimeout(() => {
+                    applyTextColor(stage.textColor);
+                    showText(stage.text);
+                    spawnParticles(); isTransitioning = false;
+                    if (si === stages.length - 1) setTimeout(() => startLovePhase(), 5000);
+                }, 1200);
+            }
+        }
+
+        // ===== LOVE PHASE =====
+        function startLovePhase() {
+            fadeOutText();
+            setTimeout(() => {
+                lovePhaseActive = true;
+                lovePhase.classList.add('active');
+                setTimeout(() => loveInstruction.classList.add('visible'), 300);
+                buildScrollingPhrases();
+            }, 1600);
+        }
+
+        function buildScrollingPhrases() {
+            const shuffled = [...lovePhrases].sort(() => Math.random() - 0.5);
+
+            function createPhraseSet(phrases) {
+                const frag = document.createDocumentFragment();
+                phrases.forEach((phrase, i) => {
+                    const span = document.createElement('span');
+                    span.className = 'phrase-word';
+                    span.textContent = phrase;
+                    span.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        if (this.classList.contains('clicked')) return;
+                        this.classList.add('clicked');
+                        document.querySelectorAll('.phrase-word').forEach(pw => {
+                            if (pw.textContent === phrase && pw !== this) pw.classList.add('clicked');
+                        });
+                        handlePhraseClick(e);
+                    });
+                    frag.appendChild(span);
+                    if (i < phrases.length - 1) {
+                        const sep = document.createElement('span');
+                        sep.className = 'phrase-sep';
+                        sep.textContent = ' | ';
+                        frag.appendChild(sep);
+                    }
+                });
+                return frag;
+            }
+
+            scrollInner.appendChild(createPhraseSet(shuffled));
+            const br = document.createElement('div');
+            br.style.width = '100%'; br.style.height = '30px';
+            scrollInner.appendChild(br);
+            scrollInner.appendChild(createPhraseSet(shuffled));
+
+            requestAnimationFrame(() => {
+                const halfHeight = scrollInner.scrollHeight / 2;
+                scrollInner.style.animationDuration = (halfHeight / 40) + 's';
+            });
+        }
+
+        let sevHideTimer = null;
+
+        function handlePhraseClick(e) {
+            spawnHeartBurst(e.clientX, e.clientY);
+            cokCount++;
+            let coks = '';
+            for (let i = 0; i < cokCount - 1; i++) coks += 'Çok ';
+            const text = 'Seni ' + coks + 'Seviyorum';
+
+            // Random font each click
+            const randomFont = getRandomFont();
+            seniSeviyorum.style.fontFamily = randomFont;
+
+            // Random color each click
+            const hue = Math.floor(Math.random() * 360);
+            const color = `hsl(${hue}, 85%, 75%)`;
+            seniSeviyorum.style.color = color;
+            seniSeviyorum.style.textShadow = `0 0 20px hsla(${hue},90%,60%,0.7), 0 0 40px hsla(${hue},90%,50%,0.4), 0 0 60px hsla(${hue},80%,40%,0.3), 0 2px 8px rgba(0,0,0,0.8)`;
+
+            // Clear any pending hide timer
+            if (sevHideTimer) { clearTimeout(sevHideTimer); sevHideTimer = null; }
+
+            // Remove hide class, reset
+            seniSeviyorum.classList.remove('hide');
+
+            if (cokCount === 1) {
+                seniSeviyorum.style.fontSize = 'clamp(24px, 6vw, 44px)';
+                seniSeviyorum.textContent = text;
+                seniSeviyorum.className = '';
+                void seniSeviyorum.offsetWidth;
+                seniSeviyorum.classList.add('show');
+            } else {
+                seniSeviyorum.classList.remove('bump');
+                void seniSeviyorum.offsetWidth;
+
+                // Start with base font, set text, let it span full width
+                seniSeviyorum.style.fontSize = 'clamp(24px, 6vw, 44px)';
+                seniSeviyorum.textContent = text;
+
+                // Check if text overflows vertically (more than ~40% of screen height)
+                const maxH = window.innerHeight * 0.4;
+                let currentVw = 6;
+                while (seniSeviyorum.scrollHeight > maxH && currentVw > 2.5) {
+                    currentVw -= 0.3;
+                    seniSeviyorum.style.fontSize = `clamp(14px, ${currentVw}vw, 44px)`;
+                }
+
+                seniSeviyorum.classList.add('bump');
+            }
+
+            // Auto-hide after 2 seconds
+            sevHideTimer = setTimeout(() => {
+                seniSeviyorum.classList.add('hide');
+                sevHideTimer = null;
+            }, 2000);
+        }
+
+        // ===== MAIN CLICK =====
+        app.addEventListener('click', (e) => {
+            if (isTransitioning || videoPlaying || lovePhaseActive) return;
+            if (currentStage < stages.length - 1) { currentStage++; goToStage(currentStage); }
+        });
+
+        goToStage(0);
+        document.addEventListener('touchmove', (e) => { if (!lovePhaseActive) e.preventDefault(); }, { passive: false });
+    </script>
+</body>
+
+</html>
